@@ -3,6 +3,7 @@ from django.http import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
 from .models import Topic
+from .models import Entry
 from .forms import TopicForm
 from .forms import EntryForm
 
@@ -43,6 +44,7 @@ def new_topic(request):
 def new_entry(request, topic_id):
 	"""Add a new entry for a particular topic."""
 	topic = Topic.objects.get(id=topic_id)
+	
 	if request.method != 'POST':
 		# No data submitted; create a blank form.
 		form = EntryForm()
@@ -53,8 +55,27 @@ def new_entry(request, topic_id):
 			new_entry = form.save(commit=False)
 			new_entry.topic = topic
 			new_entry.save()
-			return HttpResponseRedirect(reverse('learning_logs:topic', args=[topic_id]))
+			return HttpResponseRedirect(reverse('learning_logs:topic', args=[topic.id]))
 
 	context = {'topic': topic, 'form': form}
 	return render(request, 'learning_logs/new_entry.html', context)
+
+def edit_entry(request, entry_id):
+	"""Edit an existing entry."""
+	entry = Entry.objects.get(id=entry_id)
+	topic = entry.topic
+
+	if request.method != 'POST':
+		# Initial request; pre-fill form with the current entry.
+		form = EntryForm(instance=entry)
+	else:
+		# POST data submitted; process data.
+		form = EntryForm(instance=entry, data=request.POST)
+		if form.is_valid():
+			form.save()
+			return HttpResponseRedirect(reverse('learning_logs:topic', args=[topic.id]))
+
+	context = {'entry': entry, 'topic': topic, 'form': form}
+	return render(request, 'learning_logs/edit_entry.html', context)
+
 
